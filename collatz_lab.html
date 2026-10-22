@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a1020">
+<title>Collatz Lab — 3n + 1 Explorer</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #080d19;
+    --panel: rgba(17, 26, 46, .84);
+    --panel-2: #111b30;
+    --line: rgba(155, 181, 220, .15);
+    --muted: #91a1bc;
+    --text: #f3f6ff;
+    --cyan: #63e4f3;
+    --blue: #7b9dff;
+    --lime: #b4f28a;
+    --pink: #ff91bb;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(ellipse at 13% 0%, rgba(44, 102, 178, .22), transparent 38%),
+      radial-gradient(ellipse at 100% 22%, rgba(28, 173, 188, .12), transparent 31%),
+      var(--bg);
+  }
+  .shell { width: min(1180px, calc(100% - 36px)); margin: 0 auto; padding: 30px 0 54px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 42px; }
+  .brand { display: flex; align-items: center; gap: 12px; letter-spacing: .15em; font-size: 12px; font-weight: 800; color: #dce7ff; }
+  .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid rgba(99,228,243,.4); border-radius: 12px; color: var(--cyan); background: rgba(99,228,243,.08); box-shadow: 0 0 26px rgba(99,228,243,.08); font-size: 15px; }
+  .status-pill { border: 1px solid var(--line); border-radius: 99px; color: #aebdd4; padding: 8px 12px; font-size: 11px; letter-spacing: .11em; text-transform: uppercase; white-space: nowrap; }
+  .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--lime); margin-right: 7px; vertical-align: 1px; box-shadow: 0 0 10px rgba(180,242,138,.65); }
+  .hero { max-width: 780px; margin-bottom: 30px; }
+  .eyebrow { color: var(--cyan); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; font-weight: 800; margin-bottom: 14px; }
+  h1 { margin: 0; letter-spacing: -.055em; line-height: 1.03; font-size: clamp(38px, 6vw, 68px); font-weight: 760; }
+  h1 span { color: var(--cyan); }
+  .subtitle { max-width: 650px; color: var(--muted); line-height: 1.7; margin: 18px 0 0; font-size: 15px; }
+  .panel { background: linear-gradient(145deg, rgba(18, 29, 51, .92), rgba(12, 20, 37, .92)); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 18px 55px rgba(0,0,0,.16); }
+  .input-panel { padding: 22px; margin-bottom: 18px; }
+  .input-top { display: flex; align-items: end; gap: 12px; }
+  .field-wrap { flex: 1; min-width: 0; }
+  label { display: block; color: #c3d0e7; font-weight: 700; font-size: 12px; margin-bottom: 9px; }
+  .input-line { display: flex; gap: 10px; }
+  input[type="text"] { min-width: 0; width: 100%; border: 1px solid rgba(155,181,220,.23); outline: none; color: white; background: rgba(4,10,23,.72); border-radius: 12px; padding: 15px 16px; font-size: 18px; font-weight: 650; letter-spacing: .015em; transition: border-color .2s, box-shadow .2s; }
+  input[type="text"]:focus { border-color: rgba(99,228,243,.72); box-shadow: 0 0 0 3px rgba(99,228,243,.10); }
+  button { border: 0; cursor: pointer; font: inherit; transition: transform .15s, filter .15s, background .15s; }
+  button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  button:active { transform: translateY(1px); }
+  .primary { flex: 0 0 auto; padding: 0 23px; border-radius: 12px; font-weight: 800; color: #06121b; background: linear-gradient(120deg, #72e9f3, #8ce6c2); box-shadow: 0 7px 22px rgba(99,228,243,.13); }
+  .primary:hover { filter: brightness(1.07); }
+  .quick-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; color: var(--muted); font-size: 12px; }
+  .quick-btn { background: rgba(151,174,215,.07); border: 1px solid var(--line); color: #d5e0f5; padding: 6px 11px; border-radius: 8px; font-size: 12px; }
+  .quick-btn:hover { background: rgba(99,228,243,.10); border-color: rgba(99,228,243,.34); }
+  .error { display: none; margin-top: 12px; color: #ffb4c9; font-size: 13px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .stat { min-width: 0; padding: 18px 19px; }
+  .stat-label { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .10em; text-transform: uppercase; }
+  .stat-value { overflow-wrap: anywhere; margin-top: 12px; font-size: clamp(20px, 3vw, 29px); font-weight: 760; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .stat-note { color: #7f91ad; font-size: 11px; margin-top: 7px; }
+  .cyan { color: var(--cyan); } .pink { color: var(--pink); } .lime { color: var(--lime); }
+  .chart-panel { padding: 22px 22px 14px; margin-bottom: 18px; }
+  .section-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .section-title { margin: 0; font-size: 17px; letter-spacing: -.02em; font-weight: 750; }
+  .section-sub { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .toggle { display: flex; border: 1px solid var(--line); background: rgba(4,10,23,.55); border-radius: 10px; padding: 4px; gap: 3px; flex: 0 0 auto; }
+  .toggle button { color: #9aaac5; padding: 7px 11px; border-radius: 7px; font-size: 11px; font-weight: 750; }
+  .toggle button.active { color: #07131d; background: var(--cyan); }
+  .graph-wrap { position: relative; width: 100%; margin-top: 16px; }
+  #chart { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+  .chart-grid { stroke: rgba(149,174,214,.12); stroke-width: 1; }
+  .chart-axis { stroke: rgba(149,174,214,.32); stroke-width: 1; }
+  .chart-text { fill: #8192af; font-size: 11px; font-family: inherit; }
+  .chart-line { fill: none; stroke: var(--cyan); stroke-width: 2.3; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 5px rgba(99,228,243,.25)); }
+  .chart-area { fill: url(#areaGradient); }
+  .chart-note { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 15px; color: #8192af; font-size: 11px; padding: 0 8px 3px; }
+  .chart-note strong { color: #c9d7ee; font-weight: 650; }
+  .lower-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr); gap: 18px; }
+  .sequence-panel, .rule-panel { padding: 22px; min-width: 0; }
+  .sequence-actions { display: flex; gap: 7px; }
+  .small-btn { background: rgba(151,174,215,.07); border: 1px solid var(--line); color: #c9d7ee; padding: 8px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .small-btn:hover { border-color: rgba(99,228,243,.35); }
+  .sequence-meta { margin-top: 10px; color: #8495b1; font-size: 11px; }
+  .sequence { margin-top: 17px; display: flex; flex-wrap: wrap; gap: 7px; max-height: 260px; overflow: auto; padding: 1px 4px 4px 1px; }
+  .num-chip { border-radius: 8px; padding: 7px 9px; background: rgba(133,157,196,.08); border: 1px solid rgba(133,157,196,.13); color: #c6d3e8; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .num-chip.odd { border-color: rgba(255,145,187,.18); color: #ffb0cd; }
+  .num-chip.even { border-color: rgba(99,228,243,.15); color: #9aebf3; }
+  .num-chip.final { background: rgba(180,242,138,.11); border-color: rgba(180,242,138,.34); color: var(--lime); }
+  .ellipsis { color: #7b8ba5; align-self: center; padding: 0 4px; font-size: 12px; }
+  .rule-intro { color: var(--muted); font-size: 12px; line-height: 1.65; margin: 8px 0 18px; }
+  .rule { display: flex; gap: 12px; align-items: flex-start; padding: 13px 0; border-top: 1px solid var(--line); }
+  .rule-symbol { flex: 0 0 36px; height: 36px; display: grid; place-items: center; background: rgba(99,228,243,.09); border: 1px solid rgba(99,228,243,.18); border-radius: 10px; color: var(--cyan); font-weight: 850; font-size: 13px; }
+  .rule:nth-of-type(3) .rule-symbol { color: var(--pink); background: rgba(255,145,187,.08); border-color: rgba(255,145,187,.2); }
+  .rule strong { display: block; font-size: 13px; margin: 1px 0 5px; }
+  .rule span { display: block; font-size: 12px; line-height: 1.55; color: var(--muted); }
+  .footer { text-align: center; color: #596984; font-size: 11px; margin-top: 25px; line-height: 1.7; }
+  @media (max-width: 760px) {
+    .shell { width: min(100% - 22px, 600px); padding-top: 18px; }
+    .topbar { margin-bottom: 32px; }
+    .status-pill { font-size: 9px; padding: 7px 9px; }
+    .input-top { display: block; }
+    .input-line { flex-direction: column; }
+    .primary { padding: 14px; }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 9px; }
+    .stat { padding: 15px; }
+    .chart-panel, .sequence-panel, .rule-panel, .input-panel { padding: 16px; }
+    .lower-grid { grid-template-columns: 1fr; }
+    .section-head { align-items: flex-start; }
+    .chart-text { font-size: 12px; }
+  }
+  @media (max-width: 430px) {
+    .brand { font-size: 10px; letter-spacing: .1em; }
+    .brand-mark { width: 31px; height: 31px; }
+    .status-pill { letter-spacing: .03em; }
+    .section-head.chart-head { display: block; }
+    .toggle { margin-top: 13px; width: fit-content; }
+    .sequence-head { display: block; }
+    .sequence-actions { margin-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">∿</div><span>COLLATZ LAB</span></div>
+    <div class="status-pill"><span class="status-dot"></span>3N + 1 EXPLORER</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">An experiment in number theory</div>
+      <h1>A simple rule.<br><span>An unexpected journey.</span></h1>
+      <p class="subtitle">Enter any positive whole number and watch the Collatz sequence unfold. Every number follows the same two rules — but the path it takes can be surprisingly complicated.</p>
+    </section>
+
+    <section class="panel input-panel" aria-label="Starting number">
+      <div class="input-top">
+        <div class="field-wrap">
+          <label for="startNumber">STARTING NUMBER (POSITIVE INTEGER)</label>
+          <div class="input-line">
+            <input id="startNumber" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" value="27" aria-describedby="inputError">
+            <button id="runBtn" class="primary" type="button">Calculate sequence <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="quick-row"><span>Try a number:</span><button class="quick-btn" data-number="7">7</button><button class="quick-btn" data-number="19">19</button><button class="quick-btn" data-number="27">27</button><button class="quick-btn" data-number="97">97</button><button class="quick-btn" data-number="871">871</button></div>
+      <div id="inputError" class="error" role="alert"></div>
+    </section>
+
+    <section class="stats" aria-label="Sequence statistics">
+      <article class="panel stat"><div class="stat-label">Total steps</div><div class="stat-value cyan" id="stepsStat">—</div><div class="stat-note">Moves until reaching 1</div></article>
+      <article class="panel stat"><div class="stat-label">Highest value</div><div class="stat-value pink" id="peakStat">—</div><div class="stat-note" id="peakNote">Peak in this sequence</div></article>
+      <article class="panel stat"><div class="stat-label">Peak at step</div><div class="stat-value" id="peakStepStat">—</div><div class="stat-note">Iteration where the peak occurs</div></article>
+      <article class="panel stat"><div class="stat-label">Odd / even moves</div><div class="stat-value lime" id="movesStat">—</div><div class="stat-note" id="movesNote">3n + 1 / n ÷ 2</div></article>
+    </section>
+
+    <section class="panel chart-panel">
+      <div class="section-head chart-head">
+        <div><h2 class="section-title">Sequence trajectory</h2><div class="section-sub">How the value changes with each iteration</div></div>
+        <div class="toggle" role="group" aria-label="Graph scale"><button id="linearBtn" type="button">Linear scale</button><button id="logBtn" type="button" class="active">Log scale</button></div>
+      </div>
+      <div class="graph-wrap">
+        <svg id="chart" viewBox="0 0 1000 410" role="img" aria-label="Line graph of Collatz sequence values by iteration">
+          <defs><linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#63e4f3" stop-opacity=".20"/><stop offset="100%" stop-color="#63e4f3" stop-opacity="0"/></linearGradient></defs>
+          <g id="gridLayer"></g><path id="areaPath" class="chart-area" d=""></path><path id="linePath" class="chart-line" d=""></path><g id="axisLayer"></g>
+          <g id="hoverLayer" visibility="hidden"><line id="hoverLine" x1="0" y1="25" x2="0" y2="350" stroke="#eafaff" stroke-opacity=".5" stroke-dasharray="4 4"/><circle id="hoverDot" cx="0" cy="0" r="4.5" fill="#eafaff" stroke="#63e4f3" stroke-width="2"/></g>
+          <rect id="hitArea" x="80" y="24" width="890" height="326" fill="transparent" style="cursor:crosshair" aria-label="Hover to inspect graph values"></rect>
+        </svg>
+      </div>
+      <div class="chart-note"><span id="graphHint">Hover over the graph to inspect a step.</span><span id="graphRange">Showing all iterations</span></div>
+    </section>
+
+    <div class="lower-grid">
+      <section class="panel sequence-panel">
+        <div class="section-head sequence-head">
+          <div><h2 class="section-title">Full sequence</h2><div class="section-sub">Values in order, from start to finish</div></div>
+          <div class="sequence-actions"><button class="small-btn" id="copyBtn" type="button">Copy sequence</button><button class="small-btn" id="csvBtn" type="button">Export CSV ↓</button></div>
+        </div>
+        <div class="sequence-meta" id="sequenceMeta"></div>
+        <div class="sequence" id="sequenceList" aria-live="polite"></div>
+      </section>
+      <aside class="panel rule-panel">
+        <h2 class="section-title">The 3n + 1 rules</h2>
+        <p class="rule-intro">Start with any positive integer. Apply the correct rule again and again, using each result as the next input.</p>
+        <div class="rule"><div class="rule-symbol">÷ 2</div><div><strong>If n is even</strong><span>Divide it by 2. For example, 8 → 4.</span></div></div>
+        <div class="rule"><div class="rule-symbol">3n+1</div><div><strong>If n is odd</strong><span>Multiply by 3, then add 1. For example, 7 → 22.</span></div></div>
+        <div class="rule"><div class="rule-symbol">1</div><div><strong>The conjecture</strong><span>The Collatz conjecture says every positive integer eventually reaches 1. It has not been proven for all positive integers.</span></div></div>
+      </aside>
+    </div>
+  </main>
+  <footer class="footer">COLLATZ LAB · Calculations use integer arithmetic for sequence values.<br>The conjecture is widely tested, but remains an open mathematical problem.</footer>
+</div>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const input = $('startNumber');
+  const errorEl = $('inputError');
+  const MAX_STEPS = 100000;
+  const MAX_DIGITS = 500;
+  const PLOT = { left: 80, right: 970, top: 24, bottom: 350 };
+  let values = [];
+  let scaleMode = 'log';
+  let currentStart = 27n;
+  let peakValue = 27n;
+  let peakIndex = 0;
+
+  function log10BigInt(value) {
+    if (value <= 0n) return 0;
+    const s = value.toString();
+    const take = Math.min(15, s.length);
+    const leading = Number(s.slice(0, take));
+    return (s.length - take) + Math.log10(leading);
+  }
+  function compactBigInt(value, keep = 13) {
+    const s = value.toString();
+    if (s.length <= keep) return s;
+    const front = Math.ceil((keep - 3) / 2);
+    const back = Math.floor((keep - 3) / 2);
+    return s.slice(0, front) + '…' + s.slice(-back);
+  }
+  function shortNumber(n) {
+    if (n < 1000) return String(n);
+    if (n < 1e6) return (n / 1e3).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, '') + 'k';
+    if (n < 1e9) return (n / 1e6).toFixed(n < 1e7 ? 1 : 0).replace(/\.0$/, '') + 'M';
+    return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  }
+  function linearRatio(v, max) {
+    if (max === 0n) return 0;
+    const precision = 1000000000n;
+    return Number((v * precision) / max) / Number(precision);
+  }
+  function yRatio(v, max) {
+    if (scaleMode === 'linear') return linearRatio(v, max);
+    const actualMaxLog = log10BigInt(max);
+    if (actualMaxLog === 0) return 1;
+    return log10BigInt(v) / actualMaxLog;
+  }
+  function graphY(v, max) {
+    const r = Math.max(0, Math.min(1, yRatio(v, max)));
+    return PLOT.bottom - r * (PLOT.bottom - PLOT.top);
+  }
+  function graphX(index, steps) {
+    return PLOT.left + (steps === 0 ? 0 : index / steps) * (PLOT.right - PLOT.left);
+  }
+  function validateAndRun() {
+    const raw = input.value.trim().replace(/,/g, '');
+    if (!/^\d+$/.test(raw)) return showError('Enter a positive whole number using digits only.');
+    if (raw.length > MAX_DIGITS) return showError(`Please use a number with ${MAX_DIGITS} digits or fewer.`);
+    let start;
+    try { start = BigInt(raw); } catch (_) { return showError('That number could not be read. Please check it and try again.'); }
+    if (start < 1n) return showError('The starting number must be at least 1.');
+    hideError();
+    input.value = raw;
+    runCollatz(start);
+  }
+  function showError(message) { errorEl.textContent = message; errorEl.style.display = 'block'; input.setAttribute('aria-invalid', 'true'); }
+  function hideError() { errorEl.textContent = ''; errorEl.style.display = 'none'; input.removeAttribute('aria-invalid'); }
+  function runCollatz(start) {
+    currentStart = start;
+    values = [start];
+    let n = start, peak = start, pIndex = 0, oddMoves = 0, evenMoves = 0;
+    while (n !== 1n && values.length <= MAX_STEPS) {
+      if ((n & 1n) === 0n) { n /= 2n; evenMoves++; }
+      else { n = 3n * n + 1n; oddMoves++; }
+      values.push(n);
+      if (n > peak) { peak = n; pIndex = values.length - 1; }
+    }
+    peakValue = peak; peakIndex = pIndex;
+    const reachedOne = values[values.length - 1] === 1n;
+    $('stepsStat').textContent = reachedOne ? (values.length - 1).toLocaleString('en-US') : `${(values.length - 1).toLocaleString('en-US')}+`;
+    $('peakStat').textContent = compactBigInt(peak, 15);
+    $('peakStat').title = peak.toString();
+    $('peakNote').textContent = `Peak value · ${peak.toString().length.toLocaleString('en-US')} digit${peak.toString().length === 1 ? '' : 's'}`;
+    $('peakStepStat').textContent = pIndex.toLocaleString('en-US');
+    $('movesStat').textContent = `${oddMoves.toLocaleString('en-US')} / ${evenMoves.toLocaleString('en-US')}`;
+    $('movesNote').textContent = reachedOne ? 'Odd moves / even moves' : 'Step limit reached before 1';
+    $('graphRange').textContent = reachedOne ? `${(values.length - 1).toLocaleString('en-US')} iterations · complete` : `Stopped at ${MAX_STEPS.toLocaleString('en-US')} iterations`;
+    $('sequenceMeta').textContent = `${values.length.toLocaleString('en-US')} values · start ${compactBigInt(start, 24)} · ${reachedOne ? 'reached 1' : 'maximum iteration limit reached'}`;
+    renderSequence(); renderChart();
+  }
+  function renderSequence() {
+    const list = $('sequenceList');
+    list.replaceChildren();
+    const total = values.length;
+    let indices;
+    if (total <= 1400) indices = Array.from({length: total}, (_, i) => i);
+    else indices = [...Array.from({length: 700}, (_, i) => i), -1, ...Array.from({length: 700}, (_, i) => total - 700 + i)];
+    for (const index of indices) {
+      if (index === -1) {
+        const gap = document.createElement('span'); gap.className = 'ellipsis'; gap.textContent = `… ${Math.max(0, total - 1400).toLocaleString('en-US')} values hidden …`; list.appendChild(gap); continue;
+      }
+      const v = values[index];
+      const chip = document.createElement('span');
+      chip.className = 'num-chip ' + (index === total - 1 && v === 1n ? 'final' : ((v & 1n) ? 'odd' : 'even'));
+      chip.textContent = compactBigInt(v, 25);
+      chip.title = `Step ${index}: ${v.toString()}${index === total - 1 && v === 1n ? ' (end)' : ''}`;
+      list.appendChild(chip);
+    }
+  }
+  function renderChart() {
+    const grid = $('gridLayer'), axes = $('axisLayer');
+    grid.replaceChildren(); axes.replaceChildren();
+    const steps = values.length - 1;
+    const maxVal = values.reduce((m, v) => v > m ? v : m, 1n);
+    const plotW = PLOT.right - PLOT.left, plotH = PLOT.bottom - PLOT.top;
+    const ns = 'http://www.w3.org/2000/svg';
+    const el = (tag, attrs, parent, text) => {
+      const node = document.createElementNS(ns, tag);
+      Object.entries(attrs || {}).forEach(([k, v]) => node.setAttribute(k, String(v)));
+      if (text !== undefined) node.textContent = text;
+      parent.appendChild(node); return node;
+    };
+    // Horizontal grid/ticks. Log scale uses powers-of-ten-like milestones; linear uses equal fractions.
+    const actualMaxLog = log10BigInt(maxVal);
+    const maxLog = Math.max(actualMaxLog, 1);
+    for (let i = 0; i <= 4; i++) {
+      const frac = 1 - i / 4;
+      const y = PLOT.top + i * plotH / 4;
+      el('line', {x1:PLOT.left, y1:y, x2:PLOT.right, y2:y, class:'chart-grid'}, grid);
+      let label;
+      if (scaleMode === 'log') {
+        const exponent = maxLog * frac;
+        if (actualMaxLog === 0) {
+          label = i === 0 ? '1' : '';
+        } else if (actualMaxLog < 4.5) {
+          const value = Math.pow(10, exponent);
+          label = value >= 1000 ? shortNumber(value) : Number(value.toFixed(2)).toString();
+        } else {
+          label = `10^${Number(exponent.toFixed(1)).toString()}`;
+        }
+      } else {
+        const integer = maxVal * BigInt(4 - i) / 4n;
+        label = compactBigInt(integer, 12);
+      }
+      el('text', {x:PLOT.left-12, y:y+4, 'text-anchor':'end', class:'chart-text'}, axes, label);
+    }
+    // Vertical grid and step labels.
+    for (let i = 0; i <= 4; i++) {
+      const x = PLOT.left + plotW * i / 4;
+      el('line', {x1:x, y1:PLOT.top, x2:x, y2:PLOT.bottom, class:'chart-grid'}, grid);
+      const step = Math.round(steps * i / 4);
+      el('text', {x, y:PLOT.bottom+23, 'text-anchor':'middle', class:'chart-text'}, axes, step.toLocaleString('en-US'));
+    }
+    el('line', {x1:PLOT.left, y1:PLOT.top, x2:PLOT.left, y2:PLOT.bottom, class:'chart-axis'}, axes);
+    el('line', {x1:PLOT.left, y1:PLOT.bottom, x2:PLOT.right, y2:PLOT.bottom, class:'chart-axis'}, axes);
+    el('text', {x:(PLOT.left+PLOT.right)/2, y:399, 'text-anchor':'middle', class:'chart-text'}, axes, 'ITERATION');
+    el('text', {x:18, y:(PLOT.top+PLOT.bottom)/2, transform:`rotate(-90 18 ${(PLOT.top+PLOT.bottom)/2})`, 'text-anchor':'middle', class:'chart-text'}, axes, scaleMode === 'log' ? 'VALUE · LOG SCALE' : 'VALUE · LINEAR SCALE');
+
+    // Downsample very long sequences for smooth, responsive SVG rendering.
+    const maxPoints = 6000;
+    const points = [];
+    if (values.length <= maxPoints) {
+      for (let i = 0; i < values.length; i++) points.push([i, values[i]]);
+    } else {
+      const stride = (values.length - 1) / (maxPoints - 1);
+      for (let j = 0; j < maxPoints; j++) {
+        const idx = Math.min(values.length - 1, Math.round(j * stride));
+        points.push([idx, values[idx]]);
+      }
+    }
+    const d = points.map(([i,v], j) => `${j ? 'L' : 'M'}${graphX(i, steps).toFixed(2)},${graphY(v,maxVal).toFixed(2)}`).join(' ');
+    $('linePath').setAttribute('d', d);
+    $('areaPath').setAttribute('d', `${d} L${PLOT.right},${PLOT.bottom} L${PLOT.left},${PLOT.bottom} Z`);
+    $('hitArea').setAttribute('x', PLOT.left); $('hitArea').setAttribute('y', PLOT.top);
+    $('hitArea').setAttribute('width', plotW); $('hitArea').setAttribute('height', plotH);
+    $('hoverLayer').setAttribute('visibility', 'hidden');
+    $('graphHint').textContent = 'Hover over the graph to inspect a step.';
+    $('linearBtn').classList.toggle('active', scaleMode === 'linear');
+    $('logBtn').classList.toggle('active', scaleMode === 'log');
+  }
+  function inspectGraph(evt) {
+    if (!values.length) return;
+    const svg = $('chart');
+    const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+    const matrix = svg.getScreenCTM(); if (!matrix) return;
+    const p = pt.matrixTransform(matrix.inverse());
+    const x = Math.max(PLOT.left, Math.min(PLOT.right, p.x));
+    const steps = values.length - 1;
+    const step = steps === 0 ? 0 : Math.max(0, Math.min(steps, Math.round((x - PLOT.left) / (PLOT.right - PLOT.left) * steps)));
+    const v = values[step];
+    const maxVal = peakValue > 0n ? peakValue : 1n;
+    const y = graphY(v, maxVal);
+    $('hoverLine').setAttribute('x1', graphX(step, steps)); $('hoverLine').setAttribute('x2', graphX(step, steps));
+    $('hoverLine').setAttribute('y1', PLOT.top); $('hoverLine').setAttribute('y2', PLOT.bottom);
+    $('hoverDot').setAttribute('cx', graphX(step, steps)); $('hoverDot').setAttribute('cy', y);
+    $('hoverLayer').setAttribute('visibility', 'visible');
+    $('graphHint').innerHTML = `<strong>Step ${step.toLocaleString('en-US')}</strong> · Value <strong>${escapeHtml(compactBigInt(v, 34))}</strong>`;
+    $('hoverDot').setAttribute('aria-label', `Step ${step}, value ${v.toString()}`);
+  }
+  function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  async function copySequence() {
+    const text = values.map(String).join(' → ');
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+      else {
+        const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+        const ok = document.execCommand('copy'); ta.remove(); if (!ok) throw new Error('copy failed');
+      }
+      flashButton($('copyBtn'), 'Copied ✓');
+    } catch (_) { flashButton($('copyBtn'), 'Copy unavailable'); }
+  }
+  function exportCsv() {
+    const rows = ['step,value', ...values.map((v, i) => `${i},${v.toString()}`)];
+    const blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = `collatz-${currentStart.toString().slice(0,40)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    flashButton($('csvBtn'), 'Exported ✓');
+  }
+  function flashButton(button, label) {
+    const original = button.textContent; button.textContent = label;
+    setTimeout(() => { button.textContent = original; }, 1500);
+  }
+  $('runBtn').addEventListener('click', validateAndRun);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') validateAndRun(); });
+  document.querySelectorAll('[data-number]').forEach(btn => btn.addEventListener('click', () => { input.value = btn.dataset.number; validateAndRun(); }));
+  $('linearBtn').addEventListener('click', () => { scaleMode = 'linear'; renderChart(); });
+  $('logBtn').addEventListener('click', () => { scaleMode = 'log'; renderChart(); });
+  $('hitArea').addEventListener('mousemove', inspectGraph);
+  $('hitArea').addEventListener('touchmove', (e) => { if (e.touches.length) inspectGraph(e.touches[0]); }, {passive:true});
+  $('hitArea').addEventListener('mouseleave', () => $('hoverLayer').setAttribute('visibility', 'hidden'));
+  $('hitArea').addEventListener('touchend', () => $('hoverLayer').setAttribute('visibility', 'hidden'));
+  $('copyBtn').addEventListener('click', copySequence);
+  $('csvBtn').addEventListener('click', exportCsv);
+  runCollatz(27n);
+})();
+</script>
+</body>
+</html>
